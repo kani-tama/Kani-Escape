@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>カニゲーム</title>
+  <style>
+    /* ゲーム画面の箱 */
+    #game {
+      position: relative;
+      width: 360px;
+      height: 640px;
+      margin: 0 auto;
+      background: #cce8ff; /* 水色＝海っぽい */
+      overflow: hidden;
+      touch-action: none; /* ゲーム領域での標準ジェスチャ（スクロールなど）を無効化 */
+    }
+
+    /* カニ */
+    #crab {
+      position: absolute;
+      bottom: 100px; /* 修正: タッチボタンのスペースを確保 */
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 40px;
+    }
+
+    /* 爆弾（複数） */
+    .bomb {
+      position: absolute;
+      top: -40px;
+      left: 160px;
+      font-size: 40px;
+    }
+
+    /* 爆発エフェクト（赤い丸がポンっと広がる） */
+    .explosion {
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      background: red;
+      border-radius: 50%;
+      transform: translate(-50%, -50%) scale(0.2);
+      opacity: 1;
+      pointer-events: none;
+      animation: boom 0.4s ease-out forwards;
+    }
+
+    @keyframes boom {
+      0% {
+        transform: translate(-50%, -50%) scale(0.2);
+        opacity: 1;
+      }
+      100% {
+        transform: translate(-50%, -50%) scale(3.0);
+        opacity: 0;
+      }
+    }
+
+    /* 🏆 スコア表示のスタイル */
+    #score {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      color: #333;
+      font-size: 20px;
+      font-weight: bold;
+      z-index: 10;
+    }
+
+    /* 🛑 ゲームオーバー画面のスタイル */
+    #game-over-screen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7); /* 半透明の黒 */
+      color: white;
+      
+      display: none; 
+      
+      z-index: 20;
+      
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+    }
+
+    #game-over-screen h2 {
+      font-size: 40px;
+      margin-bottom: 10px;
+    }
+
+    #game-over-screen p {
+      font-size: 24px;
+      margin-bottom: 30px;
+    }
+
+    #game-over-screen button {
+      padding: 10px 20px;
+      font-size: 20px;
+      cursor: pointer;
+      border: none;
+      border-radius: 5px;
+      background: #ffcc00;
+      color: #333;
+      font-weight: bold;
+      transition: background 0.2s;
+    }
+    
+    #game-over-screen button:hover {
+        background: #ffe066;
+    }
+
+    /* ✨ 猫ゲット時のキランエフェクト */
+    .collect-effect {
+      position: absolute;
+      width: 30px;
+      height: 30px;
+      background: #ffd700; /* 金色っぽい色 */
+      border-radius: 50%;
+      transform: translate(-50%, -50%) scale(0.1);
+      opacity: 1;
+      pointer-events: none;
+      animation: sparkle 0.6s ease-out forwards; /* 0.6秒で動くアニメーション */
+      box-shadow: 0 0 10px 5px rgba(255, 215, 0, 0.7); /* 光ってる感じ */
+    }
+
+    @keyframes sparkle {
+      0% {
+        transform: translate(-50%, -50%) scale(0.1);
+        opacity: 1;
+      }
+      50% {
+        transform: translate(-50%, -50%) scale(1.5); /* 中間で大きくなる */
+        opacity: 0.8;
+      }
+      100% {
+        transform: translate(-50%, -50%) scale(0.5); /* 消える前に少し小さく */
+        opacity: 0;
+      }
+    }
+    
+    /* 📱 スマホ用操作ボタンのスタイル */
+    #controls {
+      position: absolute;
+      bottom: 0px;
+      width: 100%;
+      height: 80px; /* ボタンの高さ */
+      display: flex;
+      justify-content: space-around; /* 左右均等に配置 */
+      align-items: center;
+      padding: 10px;
+      box-sizing: border-box;
+      z-index: 15;
+      background: #eee; /* ボタンエリアの背景を区別しやすく */
+      border-top: 2px solid #aaa;
+    }
+    #controls button {
+      width: 45%;
+      height: 60px;
+      font-size: 30px;
+      background: #fff;
+      border: 3px solid #333;
+      border-radius: 10px;
+      cursor: pointer;
+      user-select: none; /* タップ時に青くなるのを防ぐ */
+      touch-action: manipulation; /* タップ遅延を防ぐ */
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div id="game">
+    <div id="score">生き残った時間: 0.00s</div>
+    <div id="crab">🦀</div>
+    
+    <div id="controls">
+      <button id="left-btn">◀</button>
+      <button id="right-btn">▶</button>
+    </div>
+    <div id="game-over-screen">
+      <h2>GAME OVER</h2>
+      <p id="final-score"></p>
+      <button onclick="window.location.reload()">もう一度遊ぶ</button>
+    </div>
+  </div>
+
+  <script>
+    const gameWidth = 360;
+    const gameHeight = 640;
+
+    const game = document.getElementById('game');
+    const crab = document.getElementById('crab');
+    const scoreEl = document.getElementById('score');
+    
+    const gameOverScreen = document.getElementById('game-over-screen');
+    const finalScoreEl = document.getElementById('final-score');
+    
+    gameOverScreen.style.display = 'none';
+
+    let crabX = gameWidth / 2;
+    const crabSpeed = 6;
+    
+    crab.style.left = crabX + 'px';
+
+    // 爆弾をまとめて管理する配列
+    const bombs = [];
+    let frameCount = 0;
+    let leftPressed = false;
+    let rightPressed = false;
+    let running = true;
+
+    // 爆弾を1個生成する関数
+    function spawnBomb() {
+      const el = document.createElement('div');
+      el.className = 'bomb';
+      
+      const isCat = Math.random() < 0.1;
+      el.textContent = isCat ? '🐱' : '💣';
+      const type = isCat ? 'cat' : 'bomb';
+
+      const x = Math.random() * (gameWidth - 40);
+      const y = -40;
+      // 🐱 猫は爆弾よりも速く（4.0〜6.0）落ちる
+      const speed = isCat ? 4 + Math.random() * 2 : 3 + Math.random() * 1.5; 
+
+      el.style.left = x + 'px';
+      el.style.top = y + 'px';
+      game.appendChild(el);
+
+      bombs.push({ x, y, speed, el, type });
+    }
+
+    // 赤い円の爆発エフェクト
+    function createExplosion(x, y) {
+      const ex = document.createElement('div');
+      ex.className = 'explosion';
+      ex.style.left = x + 'px';
+      ex.style.top = y + 'px';
+      game.appendChild(ex);
+
+      setTimeout(() => {
+        ex.remove();
+      }, 400);
+    }
+
+    // ✨ 猫ゲット時のキランエフェクト
+    function createCollectEffect(x, y) {
+      const effect = document.createElement('div');
+      effect.className = 'collect-effect';
+      effect.style.left = x + 'px';
+      effect.style.top = y + 'px';
+      game.appendChild(effect);
+
+      setTimeout(() => {
+        effect.remove();
+      }, 600);
+    }
+
+
+    function loop() {
+      if (!running) return;
+      frameCount++;
+
+      let score = (frameCount / 60);
+      scoreEl.textContent = `生き残った時間: ${score.toFixed(2)}s`;
+
+      if (leftPressed) {
+        crabX -= crabSpeed;
+      }
+      if (rightPressed) {
+        crabX += crabSpeed;
+      }
+
+      // カニの移動制限（画面端）
+      const minX = 30;
+      const maxX = gameWidth - 30;
+      if (crabX < minX) crabX = minX;
+      if (crabX > maxX) crabX = maxX;
+
+      crab.style.left = crabX + 'px';
+
+      // 爆弾の生成頻度
+      if (frameCount % 60 === 0) {
+        spawnBomb();
+      }
+
+      // 爆弾の落下と画面外判定
+      for (let i = bombs.length - 1; i >= 0; i--) {
+        const bomb = bombs[i];
+        bomb.y += bomb.speed;
+        bomb.el.style.top = bomb.y + 'px';
+
+        if (bomb.y > gameHeight + 40) {
+          bomb.el.remove();
+          bombs.splice(i, 1);
+          continue;
+        }
+      }
+
+      // 衝突判定
+      const crabRect = crab.getBoundingClientRect();
+      const OFFSET = 10; 
+
+      for (let i = bombs.length - 1; i >= 0; i--) {
+        const item = bombs[i];
+        const itemRect = item.el.getBoundingClientRect();
+
+        const hit =
+          crabRect.left + OFFSET < itemRect.right && 
+          crabRect.right - OFFSET > itemRect.left && 
+          crabRect.top + OFFSET < itemRect.bottom && 
+          crabRect.bottom - OFFSET > itemRect.top; 
+
+        if (hit) {
+          if (item.type === 'cat') {
+            // 猫ゲット！
+            item.el.remove();
+            bombs.splice(i, 1);
+            frameCount += 60 * 5; // スコア＋5秒
+            console.log("CAT GET! Score +5s!");
+            
+            createCollectEffect(item.x + item.el.offsetWidth / 2, item.y + item.el.offsetHeight / 2);
+            
+          } else {
+            // 爆弾ヒット！ゲームオーバー
+            running = false;
+            createExplosion(crabX, crabRect.top); // 爆発位置をカニの中心に
+            crab.style.display = 'none';
+
+            for (const b of bombs) {
+              b.el.remove();
+            }
+
+            console.log("HIT!!");
+            
+            const finalScore = (frameCount / 60).toFixed(2);
+            gameOverScreen.style.display = 'flex'; 
+            finalScoreEl.textContent = `記録: ${finalScore}秒`;
+            
+            return;
+          }
+        }
+      }
+
+      requestAnimationFrame(loop);
+    }
+
+    requestAnimationFrame(loop);
+
+    // ===================================
+    // 🕹️ PC（キーボード）操作のイベントリスナー
+    // ===================================
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft') {
+        leftPressed = true;
+      }
+      if (e.key === 'ArrowRight') {
+        rightPressed = true;
+      }
+    });
+
+    document.addEventListener('keyup', (e) => {
+      if (e.key === 'ArrowLeft') {
+        leftPressed = false;
+      }
+      if (e.key === 'ArrowRight') {
+        rightPressed = false;
+      }
+    });
+    
+    // ===================================
+    // 📱 タッチ操作（ボタン）のイベントリスナー
+    // ===================================
+
+    const leftBtn = document.getElementById('left-btn');
+    const rightBtn = document.getElementById('right-btn');
+
+    // **PC (Mouse) & Touch共通のイベントハンドラ**
+    
+    function startMoveLeft(e) {
+      e.preventDefault(); // スクロールなどを防ぐ
+      leftPressed = true;
+    }
+
+    function stopMoveLeft() {
+      leftPressed = false;
+    }
+
+    function startMoveRight(e) {
+      e.preventDefault(); // スクロールなどを防ぐ
+      rightPressed = true;
+    }
+
+    function stopMoveRight() {
+      rightPressed = false;
+    }
+
+    // 左ボタンのイベント設定
+    leftBtn.addEventListener('mousedown', startMoveLeft);
+    leftBtn.addEventListener('mouseup', stopMoveLeft);
+    leftBtn.addEventListener('mouseleave', stopMoveLeft); // ボタン外で離した場合
+    leftBtn.addEventListener('touchstart', startMoveLeft);
+    leftBtn.addEventListener('touchend', stopMoveLeft);
+
+    // 右ボタンのイベント設定
+    rightBtn.addEventListener('mousedown', startMoveRight);
+    rightBtn.addEventListener('mouseup', stopMoveRight);
+    rightBtn.addEventListener('mouseleave', stopMoveRight); // ボタン外で離した場合
+    rightBtn.addEventListener('touchstart', startMoveRight);
+    rightBtn.addEventListener('touchend', stopMoveRight);
+
+  </script>
+</body>
+</html>
