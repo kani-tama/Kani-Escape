@@ -42,7 +42,7 @@
       font-size: 40px;
     }
 
-    /* 爆発エフェクト（赤い丸がポンっと広がる） */
+    /* 爆発エフェクト */
     .explosion {
       position: absolute;
       width: 20px;
@@ -86,11 +86,8 @@
       height: 100%;
       background: rgba(0, 0, 0, 0.7); 
       color: white;
-      
       display: none; 
-      
       z-index: 20;
-      
       flex-direction: column;
       justify-content: center;
       align-items: center;
@@ -130,12 +127,10 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background: #cce8ff; /* ゲーム背景と同じ青 */
+      background: #cce8ff; 
       color: #333;
-      z-index: 30; /* GAME OVERよりもさらに手前に */
-      
-      /* 要素を中央揃えにするためのFlexbox */
-      display: flex; /* 初期は表示 */
+      z-index: 30; 
+      display: flex; 
       flex-direction: column;
       justify-content: center;
       align-items: center;
@@ -159,7 +154,7 @@
       cursor: pointer;
       border: none;
       border-radius: 8px;
-      background: #ffaa00; /* オレンジっぽい色 */
+      background: #ffaa00; 
       color: white;
       font-weight: bold;
       box-shadow: 0 4px #cc8800;
@@ -267,14 +262,15 @@
     const startScreen = document.getElementById('start-screen');
     const startButton = document.getElementById('start-button');
 
-     gameOverScreen.style.display = 'none';
+    gameOverScreen.style.display = 'none';
 
-    // 🆕 音声ファイルの準備 (ファイル名を変更)
-    const bgm = new Audio('picopico.mp3'); // BGMファイル
-    bgm.loop = true;
-
-    const hitSE = new Audio('ポップな爆発.mp3'); // 爆弾ヒット時の効果音
-    const collectSE = new Audio('猫ニャーニャー.mp3'); // 猫ゲット時の効果音
+    // 🆕 音声ファイルの準備 (半角英数字に統一を推奨)
+    // 🛑 注意: ファイル名が日本語だとエラーの原因になる可能性があります。
+    const bgm = new Audio('bgm.mp3'); 
+    bgm.loop = true; 
+    
+    const hitSE = new Audio('bomb_hit.mp3'); 
+    const collectSE = new Audio('cat_get.mp3'); 
 
     let crabX = gameWidth / 2;
     const crabSpeed = 6;
@@ -285,13 +281,19 @@
     let frameCount = 0;
     let leftPressed = false;
     let rightPressed = false;
-    let running = false; // 🛑 修正: 初期状態はゲーム停止 (START待ち)
+    let running = false; 
 
     // 🆕 ゲーム開始関数を定義
     function startGame() {
-        startScreen.style.display = 'none'; // START画面を非表示
-        running = true; // ゲーム実行フラグをON
-        requestAnimationFrame(loop); // ゲームループを開始
+        startScreen.style.display = 'none'; 
+        running = true; 
+        
+        // BGMを再生開始 (スマホの自動再生ポリシー対策)
+        bgm.play().catch(error => {
+            console.log("BGMの再生に失敗しました:", error);
+        }); 
+        
+        requestAnimationFrame(loop); 
     }
     
     // 爆弾を1個生成する関数
@@ -391,26 +393,31 @@
           crabRect.top + OFFSET < itemRect.bottom && 
           crabRect.bottom - OFFSET > itemRect.top; 
 
-        if (item.type === 'cat') {
+        if (hit) { // 💥 修正: ここに開きカッコ { を追加
+          if (item.type === 'cat') {
             item.el.remove();
             bombs.splice(i, 1);
             frameCount += 60 * 5; 
             
-            // 🆕 console.logの位置はここでOK！
             console.log("CAT GET! Score +5s!"); 
 
-            // 修正：play()メソッドの直後に.catch(e => ...)を追加
+            // 修正: スマホ対応のSE再生
             collectSE.currentTime = 0;
-            collectSE.play().catch(e => console.log("SE再生エラー:", e)); // 👈 ここを修正！
+            collectSE.play().catch(e => console.log("SE再生エラー:", e)); 
             
             createCollectEffect(item.x + item.el.offsetWidth / 2, item.y + item.el.offsetHeight / 2);
             
           } else {
+            // 爆弾に当たった時の処理
             running = false;
+            
+            // 🆕 修正: BGM停止と巻き戻し
+            bgm.pause();
+            bgm.currentTime = 0;
 
-          // 🆕 効果音を再生（Promiseでエラーを無視）
+            // 修正: スマホ対応のSE再生
             hitSE.currentTime = 0;
-            hitSE.play().catch(e => console.log("SE再生エラー:", e));
+            hitSE.play().catch(e => console.log("SE再生エラー:", e)); 
 
             createExplosion(crabX, crabRect.top); 
             crab.style.display = 'none';
@@ -427,15 +434,14 @@
             
             return;
           }
-        }
+        } // 💥 修正: if (hit) の閉じカッコ
       }
-
       requestAnimationFrame(loop);
-    }
+    } 
 
-    // 🛑 修正！ loop関数の自動実行を削除し、代わりにSTARTボタンにイベントを設定
-    // requestAnimationFrame(loop); <-- これを削除
-
+    // 🆕 STARTボタンにイベントを設定
+    startButton.addEventListener('click', startGame);
+    
     document.addEventListener('keydown', (e) => {
       if (e.key === 'ArrowLeft') {
         leftPressed = true;
@@ -454,9 +460,7 @@
       }
     });
     
-    // 🆕 STARTボタンにイベントを設定
-    startButton.addEventListener('click', startGame);
-    
+    // スマホ操作ボタンのイベント設定
     const leftBtn = document.getElementById('left-btn');
     const rightBtn = document.getElementById('right-btn');
     
