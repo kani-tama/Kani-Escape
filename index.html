@@ -77,6 +77,17 @@
       z-index: 10;
     }
     
+    /* 🆕 ハイスコア表示のスタイル */
+    #high-score {
+      position: absolute;
+      top: 40px; /* スコアの下に表示 */
+      left: 10px;
+      color: #333;
+      font-size: 18px; /* スコアより少し小さく */
+      font-weight: bold;
+      z-index: 10;
+    }
+    
     /* 🛑 ゲームオーバー画面のスタイル */
     #game-over-screen {
       position: absolute;
@@ -227,6 +238,7 @@
 <body>
   <div id="game">
     <div id="score">生き残った時間: 0.00s</div>
+    <div id="high-score">ハイスコア: 0.00s</div>
     <div id="crab">🦀</div>
     
     <div id="start-screen">
@@ -258,6 +270,9 @@
     const gameOverScreen = document.getElementById('game-over-screen');
     const finalScoreEl = document.getElementById('final-score');
     
+    // 🆕 ハイスコア要素の取得
+    const highScoreEl = document.getElementById('high-score');
+    
     // 🆕 START画面の要素を取得
     const startScreen = document.getElementById('start-screen');
     const startButton = document.getElementById('start-button');
@@ -268,8 +283,24 @@
     const bgm = new Audio('picopico.mp3'); 
     bgm.loop = true; 
     
+    // 重要な確認ポイント: ファイル名が 'bomb.mp3' と 'nyanya.mp3' であること！
     const hitSE = new Audio('bomb.mp3'); 
     const collectSE = new Audio('nyanya.mp3'); 
+
+    // 🆕 ハイスコアの読み込み
+    let highScore = 0; 
+    
+    function loadHighScore() {
+      // ブラウザに保存された 'kani_highscore' を読み込む
+      const savedScore = localStorage.getItem('kani_highscore');
+      if (savedScore) {
+        highScore = parseFloat(savedScore);
+        highScoreEl.textContent = `ハイスコア: ${highScore.toFixed(2)}s`;
+      }
+    }
+    
+    // ページロード時に読み込みを実行
+    loadHighScore(); 
 
     let crabX = gameWidth / 2;
     const crabSpeed = 6;
@@ -300,7 +331,8 @@
       const el = document.createElement('div');
       el.className = 'bomb';
       
-      const isCat = Math.random() < 0.1;
+      // 修正ポイント: 猫の出現率を10%から30%にアップ (0.3)
+      const isCat = Math.random() < 0.3;
       el.textContent = isCat ? '🐱' : '💣';
       const type = isCat ? 'cat' : 'bomb';
 
@@ -392,31 +424,31 @@
           crabRect.top + OFFSET < itemRect.bottom && 
           crabRect.bottom - OFFSET > itemRect.top; 
 
-        if (hit) { // 💥 修正済み: if (hit) の開きカッコ
+        if (hit) {
           if (item.type === 'cat') {
             item.el.remove();
             bombs.splice(i, 1);
-            frameCount += 60 * 5; 
+            frameCount += 60 * 5; // スコア＋5秒
             
             console.log("CAT GET! Score +5s!"); 
 
-            // 修正: スマホ対応のSE再生とエラー無視処理
+            // 🔊 猫SEの再生処理（エラー無視を再確認）
             collectSE.currentTime = 0;
-            collectSE.play().catch(e => console.log("SE再生エラー:", e)); 
+            collectSE.play().catch(e => console.log("猫SE再生エラー:", e)); 
             
             createCollectEffect(item.x + item.el.offsetWidth / 2, item.y + item.el.offsetHeight / 2);
             
           } else {
-            // 爆弾に当たった時の処理
+            // 爆弾に当たった時の処理 (ゲームオーバー)
             running = false;
             
-            // 修正: BGM停止と巻き戻し
+            // BGM停止と巻き戻し
             bgm.pause();
             bgm.currentTime = 0;
 
-            // 修正: スマホ対応のSE再生とエラー無視処理
+            // 🔊 爆弾SEの再生処理（エラー無視を再確認）
             hitSE.currentTime = 0;
-            hitSE.play().catch(e => console.log("SE再生エラー:", e)); 
+            hitSE.play().catch(e => console.log("爆弾SE再生エラー:", e)); 
 
             createExplosion(crabX, crabRect.top); 
             crab.style.display = 'none';
@@ -428,12 +460,21 @@
             console.log("HIT!!");
             
             const finalScore = (frameCount / 60).toFixed(2);
+            
+            // 🆕 ハイスコアの更新処理
+            if (parseFloat(finalScore) > highScore) {
+                highScore = parseFloat(finalScore);
+                // ブラウザに新しいハイスコアを保存
+                localStorage.setItem('kani_highscore', highScore.toFixed(2));
+                highScoreEl.textContent = `ハイスコア: ${highScore.toFixed(2)}s`;
+            }
+            
             gameOverScreen.style.display = 'flex'; 
             finalScoreEl.textContent = `記録: ${finalScore}秒`;
             
             return;
           }
-        } // 💥 修正済み: if (hit) の閉じカッコ
+        } 
       }
       requestAnimationFrame(loop);
     } 
