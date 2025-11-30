@@ -264,13 +264,12 @@
 
     gameOverScreen.style.display = 'none';
 
-    // 🆕 音声ファイルの準備 (半角英数字に統一を推奨)
-    // 🛑 注意: ファイル名が日本語だとエラーの原因になる可能性があります。
-    const bgm = new Audio('bgm.mp3'); 
+    // 🆕 音声ファイルの準備 (半角英数字に統一)
+    const bgm = new Audio('picopico.mp3'); 
     bgm.loop = true; 
     
-    const hitSE = new Audio('bomb_hit.mp3'); 
-    const collectSE = new Audio('cat_get.mp3'); 
+    const hitSE = new Audio('bomb.mp3'); 
+    const collectSE = new Audio('nyanya.mp3'); 
 
     let crabX = gameWidth / 2;
     const crabSpeed = 6;
@@ -393,7 +392,7 @@
           crabRect.top + OFFSET < itemRect.bottom && 
           crabRect.bottom - OFFSET > itemRect.top; 
 
-        if (hit) { // 💥 修正: ここに開きカッコ { を追加
+        if (hit) { // 💥 修正済み: if (hit) の開きカッコ
           if (item.type === 'cat') {
             item.el.remove();
             bombs.splice(i, 1);
@@ -411,7 +410,7 @@
             // 爆弾に当たった時の処理
             running = false;
             
-            // 🆕 修正: BGM停止と巻き戻し
+            // 修正: BGM停止と巻き戻し
             bgm.pause();
             bgm.currentTime = 0;
 
@@ -434,7 +433,7 @@
             
             return;
           }
-        } // 💥 修正: if (hit) の閉じカッコ
+        } // 💥 修正済み: if (hit) の閉じカッコ
       }
       requestAnimationFrame(loop);
     } 
