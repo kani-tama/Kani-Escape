@@ -391,25 +391,26 @@
           crabRect.top + OFFSET < itemRect.bottom && 
           crabRect.bottom - OFFSET > itemRect.top; 
 
-        if (hit) {
-          if (item.type === 'cat') {
+        if (item.type === 'cat') {
             item.el.remove();
             bombs.splice(i, 1);
             frameCount += 60 * 5; 
-            console.log("CAT GET! Score +5s!");
+            
+            // 🆕 console.logの位置はここでOK！
+            console.log("CAT GET! Score +5s!"); 
 
-            // 🆕 効果音を再生（再生位置をリセットしてから再生）
+            // 修正：play()メソッドの直後に.catch(e => ...)を追加
             collectSE.currentTime = 0;
-            collectSE.play();
+            collectSE.play().catch(e => console.log("SE再生エラー:", e)); // 👈 ここを修正！
             
             createCollectEffect(item.x + item.el.offsetWidth / 2, item.y + item.el.offsetHeight / 2);
             
           } else {
             running = false;
 
-            // 🆕 効果音を再生（再生位置をリセットしてから再生）
+          // 🆕 効果音を再生（Promiseでエラーを無視）
             hitSE.currentTime = 0;
-            hitSE.play();
+            hitSE.play().catch(e => console.log("SE再生エラー:", e));
 
             createExplosion(crabX, crabRect.top); 
             crab.style.display = 'none';
