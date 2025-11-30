@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>カニゲーム</title>
+  <title>Kani Escape</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
   <style>
     /* 全体のスタイル: 画面中央寄せと余白リセット */
@@ -264,7 +264,7 @@
 
     gameOverScreen.style.display = 'none';
 
-    // 🆕 音声ファイルの準備 (半角英数字に統一)
+    // 🆕 音声ファイルの準備 (あなたの指定したファイル名に修正済み)
     const bgm = new Audio('picopico.mp3'); 
     bgm.loop = true; 
     
@@ -400,7 +400,7 @@
             
             console.log("CAT GET! Score +5s!"); 
 
-            // 修正: スマホ対応のSE再生
+            // 修正: スマホ対応のSE再生とエラー無視処理
             collectSE.currentTime = 0;
             collectSE.play().catch(e => console.log("SE再生エラー:", e)); 
             
@@ -414,7 +414,7 @@
             bgm.pause();
             bgm.currentTime = 0;
 
-            // 修正: スマホ対応のSE再生
+            // 修正: スマホ対応のSE再生とエラー無視処理
             hitSE.currentTime = 0;
             hitSE.play().catch(e => console.log("SE再生エラー:", e)); 
 
